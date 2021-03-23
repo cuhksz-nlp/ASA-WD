@@ -6,24 +6,19 @@ import sys
 from time import strftime, localtime
 import random
 import numpy as np
-
-from pytorch_transformers import BertModel
-
+import datetime
 from sklearn import metrics
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 
+from pytorch_transformers import BertModel
 from data_utils import Tokenizer4Bert, ABSADataset
-
 from kvmn import BertKVMN
-
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(sys.stdout))
-
-
 
 class Instructor:
     def __init__(self, opt):
@@ -35,15 +30,12 @@ class Instructor:
         self.model.to(opt.device)
         self.tokenizer = tokenizer
 
-        self.trainset = ABSADataset(opt.dataset_file['train'], tokenizer, self.opt)
-        self.testset = ABSADataset(opt.dataset_file['test'], tokenizer, self.opt)
+        self.trainset = ABSADataset(opt.train_file, tokenizer, self.opt)
+        self.testset = ABSADataset(opt.test_file, tokenizer, self.opt)
 
-        assert 0 <= opt.valset_ratio < 1
-        if opt.valset_ratio > 0:
-            valset_len = int(len(self.trainset) * opt.valset_ratio)
-            self.trainset, self.valset = random_split(self.trainset, (len(self.trainset)-valset_len, valset_len))
-        else:
-            self.valset = self.testset
+        assert 0 < opt.valset_ratio < 1
+        valset_len = int(len(self.trainset) * opt.valset_ratio)
+        self.trainset, self.valset = random_split(self.trainset, (len(self.trainset)-valset_len, valset_len))
 
         if opt.device.type == 'cuda':
             logger.info('cuda memory allocated: {}'.format(torch.cuda.memory_allocated(device=opt.device.index)))
@@ -95,7 +87,7 @@ class Instructor:
         opt = self.opt
         results = {"bert_model": opt.bert_model, "dataset": opt.dataset, "batch_size": opt.batch_size,
                    "learning_rate": opt.learning_rate, "seed": opt.seed, "model_name": opt.model_name,
-                   "l2reg": opt.l2reg, "incro": opt.incro, "mode": opt.mode}
+                   "l2reg": opt.l2reg, "initializer": opt.initializer, "incro": opt.incro, "mode": opt.mode}
         for epoch in range(self.opt.num_epoch):
             logger.info('>' * 100)
             logger.info('epoch: {}'.format(epoch))
@@ -147,7 +139,6 @@ class Instructor:
                 results["test_acc"] = test_acc
                 results["test_f1"] = test_f1
 
-
             output_eval_file = os.path.join(self.opt.outdir, "eval_results.txt")
             with open(output_eval_file, "w") as writer:
                 # writer.write(json.dumps(results, ensure_ascii=False))
@@ -162,7 +153,7 @@ class Instructor:
         self.model.eval()
 
         saving_path_f = open(saving_path, 'w') if saving_path is not None else None
- 
+
         with torch.no_grad():
             for t_batch, t_sample_batched in enumerate(data_loader):
 
@@ -190,16 +181,16 @@ class Instructor:
                                                                         torch.argmax(t_outputs, -1).detach().cpu().numpy(),
                                                                         t_raw_texts, t_aspects):
                         saving_path_f.write("{}\t{}\t{}\t{}\n".format(t_target, t_output, t_raw_text, t_aspect))
-        
+
         acc = n_correct / n_total
         f1 = metrics.f1_score(t_targets_all.cpu(), torch.argmax(t_outputs_all, -1).cpu(), labels=[0, 1, 2], average='macro')
         return acc, f1
 
-    def run(self):
+    def train(self):
         # Loss and Optimizer
         criterion = nn.CrossEntropyLoss()
         _params = filter(lambda p: p.requires_grad, self.model.parameters())
-        optimizer = self.opt.optimizer(_params, lr=self.opt.learning_rate, weight_decay=self.opt.l2reg)
+        optimizer = torch.optim.Adam(_params, lr=self.opt.learning_rate, weight_decay=self.opt.l2reg)
 
         train_data_loader = DataLoader(dataset=self.trainset, batch_size=self.opt.batch_size, shuffle=True)
         test_data_loader = DataLoader(dataset=self.testset, batch_size=self.opt.batch_size, shuffle=False)
@@ -208,15 +199,17 @@ class Instructor:
         self._reset_params()
         self._train(criterion, optimizer, train_data_loader, val_data_loader, test_data_loader)
 
+    def test(self):
+        test_data_loader = DataLoader(dataset=self.testset, batch_size=self.opt.batch_size, shuffle=False)
+        test_acc, test_f1 = self._evaluate_acc_f1(test_data_loader)
+        logger.info('>> test_acc: {:.4f}, test_f1: {:.4f}'.format(test_acc, test_f1))
 
-
-def main():
+def get_args():
     # Hyper Parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_name', default='bert_kv_aspect-second', type=str)
-    parser.add_argument('--dataset', default='demo', type=str)
-    parser.add_argument('--optimizer', default='adam', type=str)
-    parser.add_argument('--initializer', default='xavier_uniform_', type=str)
+    parser.add_argument('--train_file', default='demo/train.txt', type=str)
+    parser.add_argument('--test_file', default='demo/test.txt', type=str)
     parser.add_argument('--learning_rate', default='2e-5', type=float)
     parser.add_argument('--dropout', default=0, type=float)
     parser.add_argument('--bert_dropout', default=0.2, type=float)
@@ -224,14 +217,11 @@ def main():
     parser.add_argument('--num_epoch', default=10, type=int)#15
     parser.add_argument('--batch_size', default=32, type=int)
     parser.add_argument('--log_step', default=5, type=int)
-    parser.add_argument('--embed_dim', default=300, type=int)
-    parser.add_argument('--hidden_dim', default=300, type=int)
-    parser.add_argument('--bert_dim', default=768, type=int)
     parser.add_argument('--max_seq_len', default=100, type=int)
     parser.add_argument('--polarities_dim', default=3, type=int)
     parser.add_argument('--device', default=None, type=str, help='e.g. cuda:0')
     parser.add_argument('--seed', default=40, type=int, help='set seed for reproducibility')
-    parser.add_argument('--valset_ratio', default=0.1, type=float, help='set ratio between 0 and 1 for validation support')
+    parser.add_argument('--valset_ratio', default=0, type=float, help='set ratio between 0 and 1 for validation support')
     parser.add_argument('--knowledge_type', default='dep', type=str)
     parser.add_argument('--log', default='log', type=str)
     parser.add_argument('--bert_model', default='./bert-large-uncased', type=str)
@@ -241,14 +231,34 @@ def main():
     parser.add_argument('--conflict', default=0, type=int)
     parser.add_argument('--abalation', default='none', type=str)
     parser.add_argument('--outdir', default='./', type=str)
+    parser.add_argument("--do_train", action='store_true', help="Whether to run training.")
+    parser.add_argument("--do_eval", action='store_true', help="Whether to run eval on the dev set.")
     opt = parser.parse_args()
 
-    if not os.path.exists(opt.outdir):
-        try:
-            os.mkdir(opt.outdir)
-        except Exception as e:
-            print(str(e))
-    import datetime
+    input_colses = {
+        'bert_kv_sentence-first': ['text_bert_indices', 'bert_segments_ids', 'valid_indices','first_order_key_list','first_order_dep_value_matrix',
+                                   'first_order_dep_adj_matrix', 'context_indices'],
+        'bert_kv_aspect-first': ['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'first_order_key_list', 'first_order_dep_value_matrix',
+                                 'first_order_dep_adj_matrix', 'second_aspect_indices'],
+        'bert_kv_combine-first':['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'first_order_key_list', 'first_order_dep_value_matrix',
+                                 'first_order_dep_adj_matrix', 'whole_indices'],
+
+        'bert_kv_sentence-second': ['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'second_order_key_list', 'second_order_dep_value_matrix',
+                                    'second_order_dep_adj_matrix', 'context_indices'],
+        'bert_kv_aspect-second': ['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'second_order_key_list', 'second_order_dep_value_matrix',
+                                  'second_order_dep_adj_matrix', 'second_aspect_indices'],
+        'bert_kv_combine-second': ['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'second_order_key_list', 'second_order_dep_value_matrix',
+                                   'second_order_dep_adj_matrix', 'whole_indices'],
+
+        'bert_kv_sentence-third': ['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'third_order_key_list', 'third_order_dep_value_matrix',
+                                   'third_order_dep_adj_matrix', 'context_indices'],
+        'bert_kv_aspect-third': ['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'third_order_key_list', 'third_order_dep_value_matrix',
+                                 'third_order_dep_adj_matrix', 'second_aspect_indices'],
+        'bert_kv_combine-third': ['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'third_order_key_list', 'third_order_dep_value_matrix',
+                                  'third_order_dep_adj_matrix', 'whole_indices'],
+    }
+    opt.inputs_cols = input_colses[opt.model_name]
+
     now_time = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     opt.outdir = os.path.join(opt.outdir, "{}_bts_{}_lr_{}_l2reg_{}_seed_{}_bert_dropout_{}_{}".format(
         opt.dataset,
@@ -261,6 +271,11 @@ def main():
     ))
     if not os.path.exists(opt.outdir):
         os.mkdir(opt.outdir)
+
+    return opt
+
+def main():
+    opt = get_args()
 
     if opt.seed is not None:
         random.seed(opt.seed)
@@ -277,9 +292,11 @@ def main():
     logger.addHandler(logging.FileHandler(log_file))
 
     ins = Instructor(opt)
-    ins.run()
 
-
-
+    if opt.do_train:
+        ins.train()
+    elif opt.do_eval:
+        ins.test()
+    
 if __name__ == '__main__':
     main()
