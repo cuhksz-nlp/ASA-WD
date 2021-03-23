@@ -55,7 +55,6 @@ class BertKVMN(nn.Module):
         )
         self.memory.key_embedding = nn.Embedding.from_pretrained(self.bert.embeddings.word_embeddings.weight)
 
-
     def forward(self, inputs):
 
         text_bert_indices, bert_segments_ids, valid_ids, text_kv_indices,  = inputs[0], inputs[1], inputs[2], inputs[3]

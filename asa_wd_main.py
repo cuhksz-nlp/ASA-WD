@@ -297,6 +297,6 @@ def main():
         ins.train()
     elif opt.do_eval:
         ins.test()
-    
+
 if __name__ == '__main__':
     main()
