@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader, random_split
 
 from pytorch_transformers import BertModel
 from data_utils import Tokenizer4Bert, ABSADataset
-from kvmn import BertKVMN
+from asa_wd_model import AsaWd
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -24,8 +24,7 @@ class Instructor:
     def __init__(self, opt):
         self.opt = opt
         tokenizer = Tokenizer4Bert(opt.max_seq_len, opt.bert_model)
-        bert = BertModel.from_pretrained(opt.bert_model)
-        self.model = BertKVMN(bert, num_labels=opt.polarities_dim, bert_dropout=opt.bert_dropout,
+        self.model = AsaWd.from_pretrained(opt.bert_model, num_labels=opt.polarities_dim, bert_dropout=opt.bert_dropout,
                                   feature_vocab_size=opt.feature_vocab_size, incro=opt.incro)
         self.model.to(opt.device)
         self.tokenizer = tokenizer
@@ -158,6 +157,8 @@ class Instructor:
             for t_batch, t_sample_batched in enumerate(data_loader):
 
                 cols = self.opt.inputs_cols
+                cols = ['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'second_order_key_list', 'second_order_dep_value_matrix',
+                        'second_order_dep_adj_matrix', 'second_aspect_indices']
 
                 t_inputs = [t_sample_batched[col].to(self.opt.device) for col in cols]
                 t_targets = t_sample_batched['polarity'].to(self.opt.device)
@@ -227,6 +228,8 @@ def get_args():
     parser.add_argument('--bert_model', default='./bert-large-uncased', type=str)
     parser.add_argument('--f_t', default=3, type=int)
     parser.add_argument('--incro', default='cat', type=str)
+    parser.add_argument('--mem_valid', default='aspect', type=str)
+    parser.add_argument('--dep_order', default='second', type=str)
     parser.add_argument('--mode',default='case', type=str)
     parser.add_argument('--conflict', default=0, type=int)
     parser.add_argument('--abalation', default='none', type=str)
