@@ -164,7 +164,7 @@ class ABSADataset(Dataset):
                     valid_ids.append(1)
                 else:
                     valid_ids.append(0)
-        tokens, token_ids = self.tokenizer.tokenizer.convert_tokens_to_ids(tokens)
+        token_ids = self.tokenizer.tokenizer.convert_tokens_to_ids(tokens)
         return tokens, token_ids, valid_ids
 
     def create_feature(self, sentence, depinfo):
