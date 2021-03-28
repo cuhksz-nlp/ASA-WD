@@ -94,15 +94,19 @@ class Instructor:
             n_correct, n_total, loss_total = 0, 0, 0
             # switch model to training mode
             self.model.train()
-            for i_batch, sample_batched in enumerate(train_data_loader):
+            for i_batch, t_sample_batched in enumerate(train_data_loader):
                 global_step += 1
                 # clear gradient accumulators
                 optimizer.zero_grad()
-                inputs = [sample_batched[col].to(self.opt.device) for col in self.opt.inputs_cols]
+                outputs = self.model(t_sample_batched["input_ids"],
+                                     t_sample_batched["segment_ids"],
+                                     t_sample_batched["valid_ids"],
+                                     t_sample_batched["mem_valid_ids"],
+                                     t_sample_batched["key_list"],
+                                     t_sample_batched["dep_adj_matrix"],
+                                     t_sample_batched["dep_value_matrix"])
 
-                outputs = self.model(inputs)
-
-                targets = sample_batched['polarity'].to(self.opt.device)
+                targets = t_sample_batched['polarity'].to(self.opt.device)
 
                 loss = criterion(outputs, targets)
                 loss.backward()
@@ -155,17 +159,17 @@ class Instructor:
 
         with torch.no_grad():
             for t_batch, t_sample_batched in enumerate(data_loader):
-
-                cols = self.opt.inputs_cols
-                cols = ['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'second_order_key_list', 'second_order_dep_value_matrix',
-                        'second_order_dep_adj_matrix', 'second_aspect_indices']
-
-                t_inputs = [t_sample_batched[col].to(self.opt.device) for col in cols]
                 t_targets = t_sample_batched['polarity'].to(self.opt.device)
                 t_raw_texts = t_sample_batched['raw_text']
                 t_aspects = t_sample_batched['aspect']
 
-                t_outputs = self.model(t_inputs)
+                t_outputs = self.model(t_sample_batched["input_ids"],
+                                       t_sample_batched["segment_ids"],
+                                       t_sample_batched["valid_ids"],
+                                       t_sample_batched["mem_valid_ids"],
+                                       t_sample_batched["key_list"],
+                                       t_sample_batched["dep_adj_matrix"],
+                                       t_sample_batched["dep_value_matrix"])
 
                 n_correct += (torch.argmax(t_outputs, -1) == t_targets).sum().item()
                 n_total += len(t_outputs)
@@ -238,30 +242,6 @@ def get_args():
     parser.add_argument("--do_eval", action='store_true', help="Whether to run eval on the dev set.")
     opt = parser.parse_args()
 
-    input_colses = {
-        'bert_kv_sentence-first': ['text_bert_indices', 'bert_segments_ids', 'valid_indices','first_order_key_list','first_order_dep_value_matrix',
-                                   'first_order_dep_adj_matrix', 'context_indices'],
-        'bert_kv_aspect-first': ['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'first_order_key_list', 'first_order_dep_value_matrix',
-                                 'first_order_dep_adj_matrix', 'second_aspect_indices'],
-        'bert_kv_combine-first':['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'first_order_key_list', 'first_order_dep_value_matrix',
-                                 'first_order_dep_adj_matrix', 'whole_indices'],
-
-        'bert_kv_sentence-second': ['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'second_order_key_list', 'second_order_dep_value_matrix',
-                                    'second_order_dep_adj_matrix', 'context_indices'],
-        'bert_kv_aspect-second': ['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'second_order_key_list', 'second_order_dep_value_matrix',
-                                  'second_order_dep_adj_matrix', 'second_aspect_indices'],
-        'bert_kv_combine-second': ['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'second_order_key_list', 'second_order_dep_value_matrix',
-                                   'second_order_dep_adj_matrix', 'whole_indices'],
-
-        'bert_kv_sentence-third': ['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'third_order_key_list', 'third_order_dep_value_matrix',
-                                   'third_order_dep_adj_matrix', 'context_indices'],
-        'bert_kv_aspect-third': ['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'third_order_key_list', 'third_order_dep_value_matrix',
-                                 'third_order_dep_adj_matrix', 'second_aspect_indices'],
-        'bert_kv_combine-third': ['text_bert_indices', 'bert_segments_ids', 'valid_indices', 'third_order_key_list', 'third_order_dep_value_matrix',
-                                  'third_order_dep_adj_matrix', 'whole_indices'],
-    }
-    opt.inputs_cols = input_colses[opt.model_name]
-
     now_time = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     opt.outdir = os.path.join(opt.outdir, "{}_bts_{}_lr_{}_l2reg_{}_seed_{}_bert_dropout_{}_{}".format(
         opt.dataset,
@@ -291,7 +271,7 @@ def main():
     opt.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') \
         if opt.device is None else torch.device(opt.device)
 
-    log_file = '{}/{}-{}-{}.log'.format(opt.log, opt.model_name, opt.dataset, strftime("%y%m%d-%H%M", localtime()))
+    log_file = '{}/{}-{}-{}-{}.log'.format(opt.log, opt.mem_valid, opt.dep_order, opt.dataset, strftime("%y%m%d-%H%M", localtime()))
     logger.addHandler(logging.FileHandler(log_file))
 
     ins = Instructor(opt)

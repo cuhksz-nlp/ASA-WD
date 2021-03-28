@@ -53,11 +53,8 @@ class AsaWd(BertPreTrainedModel):
         self.memory.key_embedding = nn.Embedding.from_pretrained(self.bert.embeddings.word_embeddings.weight)
         self.apply(self.init_bert_weights)
 
-    def forward(self, inputs):
-        text_bert_indices, bert_segments_ids, valid_ids, text_kv_indices,  = inputs[0], inputs[1], inputs[2], inputs[3]
-        features, pos_matrix, aspect_indices = inputs[4], inputs[5], inputs[6],
-
-        sequence_output, pooled_output = self.bert(text_bert_indices, bert_segments_ids)
+    def forward(self, input_ids, segment_ids, valid_ids, mem_valid_ids, key_list, dep_adj_matrix, dep_value_matrix):
+        sequence_output, pooled_output = self.bert(input_ids, segment_ids)
         batch_size, max_len, feat_dim = sequence_output.shape
 
         valid_output = torch.zeros(batch_size, max_len, feat_dim, dtype=torch.float32, device='cuda')
@@ -65,9 +62,9 @@ class AsaWd(BertPreTrainedModel):
         for i in range(batch_size):
             temp = sequence_output[i][valid_ids[i] == 1]
             valid_output[i][:temp.size(0)] = temp
-        aspect_indices = torch.unsqueeze(aspect_indices, 2)
-        valid_output = valid_output * aspect_indices
-        a = self.memory(text_kv_indices, features, valid_output, pos_matrix)
+        mem_valid_ids = torch.unsqueeze(mem_valid_ids, 2)
+        valid_output = valid_output * mem_valid_ids
+        a = self.memory(key_list, dep_value_matrix, valid_output, dep_adj_matrix)
         pooled_output = self.bert_dropout(pooled_output)
         c = torch.cat((pooled_output, a), 1)
         logits = self.dense(c)
