@@ -224,6 +224,7 @@ def get_args():
     parser.add_argument('--log_step', default=5, type=int)
     parser.add_argument('--max_seq_len', default=100, type=int)
     parser.add_argument('--polarities_dim', default=3, type=int)
+    parser.add_argument('--feature_vocab_size', default=16384, type=int)
     parser.add_argument('--device', default=None, type=str, help='e.g. cuda:0')
     parser.add_argument('--seed', default=40, type=int, help='set seed for reproducibility')
     parser.add_argument('--valset_ratio', default=0, type=float, help='set ratio between 0 and 1 for validation support')
