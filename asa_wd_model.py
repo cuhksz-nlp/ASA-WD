@@ -35,7 +35,7 @@ class KeyValueMemoryNetwork(nn.Module):
 
 class AsaWd(BertPreTrainedModel):
     def __init__(self, config, num_labels=3, feature_vocab_size=16384, bert_dropout=0.1, incro='cat'):
-        super(AsaWd, self).__init__()
+        super(AsaWd, self).__init__(config)
         self.config = config
         self.config.num_labels = num_labels
         self.config.feature_vocab_size = feature_vocab_size
