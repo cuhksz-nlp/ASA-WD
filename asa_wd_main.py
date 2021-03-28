@@ -84,9 +84,9 @@ class Instructor:
         path = None
 
         opt = self.opt
-        results = {"bert_model": opt.bert_model, "dataset": opt.dataset, "batch_size": opt.batch_size,
-                   "learning_rate": opt.learning_rate, "seed": opt.seed, "model_name": opt.model_name,
-                   "l2reg": opt.l2reg, "initializer": opt.initializer, "incro": opt.incro, "mode": opt.mode}
+        results = {"bert_model": opt.bert_model, "batch_size": opt.batch_size,
+                   "learning_rate": opt.learning_rate, "seed": opt.seed,
+                   "l2reg": opt.l2reg, "incro": opt.incro}
         for epoch in range(self.opt.num_epoch):
             logger.info('>' * 100)
             logger.info('epoch: {}'.format(epoch))
@@ -243,8 +243,7 @@ def get_args():
     opt = parser.parse_args()
 
     now_time = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    opt.outdir = os.path.join(opt.outdir, "{}_bts_{}_lr_{}_l2reg_{}_seed_{}_bert_dropout_{}_{}".format(
-        opt.dataset,
+    opt.outdir = os.path.join(opt.outdir, "bts_{}_lr_{}_l2reg_{}_seed_{}_bert_dropout_{}_{}".format(
         opt.batch_size,
         opt.learning_rate,
         opt.l2reg,
@@ -271,7 +270,7 @@ def main():
     opt.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') \
         if opt.device is None else torch.device(opt.device)
 
-    log_file = '{}/{}-{}-{}-{}.log'.format(opt.log, opt.mem_valid, opt.dep_order, opt.dataset, strftime("%y%m%d-%H%M", localtime()))
+    log_file = '{}/{}-{}-{}.log'.format(opt.log, opt.mem_valid, opt.dep_order, strftime("%y%m%d-%H%M", localtime()))
     logger.addHandler(logging.FileHandler(log_file))
 
     ins = Instructor(opt)
