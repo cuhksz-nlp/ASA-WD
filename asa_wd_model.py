@@ -51,7 +51,6 @@ class AsaWd(BertPreTrainedModel):
             emb_size=self.config.hidden_size,
         )
         self.memory.key_embedding = nn.Embedding.from_pretrained(self.bert.embeddings.word_embeddings.weight)
-        self.apply(self.init_bert_weights)
 
     def forward(self, input_ids, segment_ids, valid_ids, mem_valid_ids, key_list, dep_adj_matrix, dep_value_matrix):
         sequence_output, pooled_output = self.bert(input_ids, segment_ids)
