@@ -143,6 +143,7 @@ class ABSADataset(Dataset):
         self.dep_order = dep_order
         self.textdata = ABSADataset.load_datafile(self.datafile)
         self.depinfo = ABSADataset.load_depfile(self.depfile)
+        self.feature = []
         for sentence,depinfo in zip(self.textdata, self.depinfo):
             self.feature.append(self.create_feature(sentence, depinfo))
 
