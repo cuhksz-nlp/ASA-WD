@@ -51,14 +51,17 @@ class DepInstanceParser():
 
 
     def dep_parsing(self):
-        words = []
-        for token in self.tokens:
-            token['word'] = token['word'].replace('\xa0', '')
-            words.append(self.change_word(token['word']))
-        dep_governed_info = [
-            {"word": word}
-            for i,word in enumerate(words)
-        ]
+        if len(self.tokens) > 0:
+            words = []
+            for token in self.tokens:
+                token['word'] = token
+                words.append(self.change_word(token['word']))
+            dep_governed_info = [
+                {"word": word}
+                for i,word in enumerate(words)
+            ]
+        else:
+            dep_governed_info = [{}] * len(self.basicDependencies)
         for dep in self.basicDependencies:
             dependent_index = dep['dependent'] - 1
             governed_index = dep['governor'] - 1
