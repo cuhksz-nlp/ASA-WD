@@ -29,8 +29,11 @@ class Instructor:
         self.model.to(opt.device)
         self.tokenizer = tokenizer
 
-        self.trainset = ABSADataset(opt.train_file, tokenizer, self.opt)
-        self.testset = ABSADataset(opt.test_file, tokenizer, self.opt)
+        print(opt)
+        deptype2id = ABSADataset.load_deptype_map(opt)
+        print(deptype2id)
+        self.trainset = ABSADataset(opt.train_file, tokenizer, self.opt, deptype2id=deptype2id)
+        self.testset = ABSADataset(opt.test_file, tokenizer, self.opt, deptype2id=deptype2id)
 
         assert 0 < opt.valset_ratio < 1
         valset_len = int(len(self.trainset) * opt.valset_ratio)
@@ -215,6 +218,7 @@ def get_args():
     parser.add_argument('--model_name', default='bert_kv_aspect-second', type=str)
     parser.add_argument('--train_file', default='demo/train.txt', type=str)
     parser.add_argument('--test_file', default='demo/test.txt', type=str)
+    parser.add_argument('--val_file', default='demo/val.txt', type=str)
     parser.add_argument('--learning_rate', default='2e-5', type=float)
     parser.add_argument('--dropout', default=0, type=float)
     parser.add_argument('--bert_dropout', default=0.2, type=float)
