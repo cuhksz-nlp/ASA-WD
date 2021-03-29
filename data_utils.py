@@ -279,6 +279,7 @@ class ABSADataset(Dataset):
     def load_deptype_map(opt):
         deptype_set = set()
         for filename in [opt.train_file, opt.test_file, opt.val_file]:
+            filename = "{}.dep".format(filename)
             if os.path.exists(filename) is False:
                 continue
             data = ABSADataset.load_depfile(filename)
