@@ -60,6 +60,7 @@ class DepInstanceParser():
                 {"word": word}
                 for i,word in enumerate(words)
             ]
+            self.words = words
         else:
             dep_governed_info = [{}] * len(self.basicDependencies)
         for dep in self.basicDependencies:
@@ -69,7 +70,6 @@ class DepInstanceParser():
                 "governor": governed_index,
                 "dep": dep['dep']
             }
-        self.words = words
         self.dep_governed_info = dep_governed_info
 
     def change_word(self, word):
@@ -80,8 +80,8 @@ class DepInstanceParser():
         return word
 
     def get_first_order(self, direct=False):
-        dep_adj_matrix  = [[0] * len(self.words) for _ in range(len(self.words))]
-        dep_type_matrix = [["none"] * len(self.words) for _ in range(len(self.words))]
+        dep_adj_matrix  = [[0] * len(self.dep_governed_info) for _ in range(len(self.dep_governed_info))]
+        dep_type_matrix = [["none"] * len(self.dep_governed_info) for _ in range(len(self.dep_governed_info))]
         for i, dep_info in enumerate(self.dep_governed_info):
             governor = dep_info["governor"]
             dep_type = dep_info["dep"]
