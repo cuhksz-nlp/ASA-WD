@@ -199,12 +199,16 @@ class ABSADataset(Dataset):
             dep_adj_matrix, dep_type_matrix = dep_instance_parser.get_second_order()
         elif self.dep_order == "third":
             dep_adj_matrix, dep_type_matrix = dep_instance_parser.get_third_order()
+        print(dep_adj_matrix)
+        print(dep_type_matrix)
 
         token_head_list = []
         for input_id, valid_id in zip(input_ids, valid_ids):
             if valid_id == 1:
                 token_head_list.append(input_id)
         key_list = token_head_list[:self.max_key_len]
+        print(token_head_list)
+        print(key_list)
         final_dep_adj_matrix = [[0]*self.max_key_len for _ in range(self.tokenizer.max_seq_len)]
         final_dep_value_matrix = [[0]*self.max_key_len for _ in range(self.tokenizer.max_seq_len)]
         for i in range(len(token_head_list)):
