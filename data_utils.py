@@ -149,6 +149,7 @@ class ABSADataset(Dataset):
         self.feature = []
         for sentence,depinfo in zip(self.textdata, self.depinfo):
             self.feature.append(self.create_feature(sentence, depinfo))
+        print(self.feature[:1])
 
     def __getitem__(self, index):
         return self.feature[index]
