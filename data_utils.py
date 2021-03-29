@@ -161,6 +161,8 @@ class ABSADataset(Dataset):
         tokens = []
         valid_ids = []
         for i, word in enumerate(text):
+            if len(text) <= 0:
+                continue
             token = self.tokenizer.tokenizer.tokenize(word)
             tokens.extend(token)
             for m in range(len(token)):
@@ -176,6 +178,10 @@ class ABSADataset(Dataset):
 
         cls_id = self.tokenizer.tokenizer.vocab["[CLS]"]
         sep_id = self.tokenizer.tokenizer.vocab["[SEP]"]
+
+        doc = text_left + aspect + text_right
+        print(doc)
+        print(len(doc.split(" ")))
 
         left_tokens, left_token_ids, left_valid_ids = self.ws(text_left.split(" "))
         right_tokens, right_token_ids, right_valid_ids = self.ws(text_right.split(" "))
@@ -201,6 +207,7 @@ class ABSADataset(Dataset):
             dep_adj_matrix, dep_type_matrix = dep_instance_parser.get_third_order()
         print(dep_adj_matrix)
         print(dep_type_matrix)
+        print(len(dep_type_matrix))
 
         token_head_list = []
         for input_id, valid_id in zip(input_ids, valid_ids):
@@ -209,6 +216,7 @@ class ABSADataset(Dataset):
         key_list = token_head_list[:self.max_key_len]
         print(token_head_list)
         print(key_list)
+        print(token_head_list)
         final_dep_adj_matrix = [[0]*self.max_key_len for _ in range(self.tokenizer.max_seq_len)]
         final_dep_value_matrix = [[0]*self.max_key_len for _ in range(self.tokenizer.max_seq_len)]
         for i in range(len(token_head_list)):
