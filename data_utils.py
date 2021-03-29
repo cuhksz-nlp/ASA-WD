@@ -191,7 +191,7 @@ class ABSADataset(Dataset):
         else:
             mem_valid_ids = [0] + [1] * len(tokens) + [0] + [1] * len(aspect_tokens)
 
-        dep_instance_parser = DepInstanceParser(basicDependencies=depinfo, tokens=tokens)
+        dep_instance_parser = DepInstanceParser(basicDependencies=depinfo, tokens=[])
         if self.dep_order == "first":
             dep_adj_matrix, dep_type_matrix = dep_instance_parser.get_first_order()
         elif self.dep_order == "second":
