@@ -204,7 +204,7 @@ class ABSADataset(Dataset):
 
         token_head_list = []
         for input_id, valid_id in zip(input_ids, valid_ids):
-            if valid_id == 1:
+            if valid_id == 1 and input_id not in [cls_id, sep_id]:
                 token_head_list.append(input_id)
         key_list = token_head_list[:self.max_key_len]
         print(token_head_list)
@@ -254,7 +254,7 @@ class ABSADataset(Dataset):
                     dep_info.append({
                         "governor": int(items[0]),
                         "dependent": int(items[1]),
-                        "dep": items[0],
+                        "dep": items[2],
                     })
                 else:
                     if len(dep_info) > 0:
