@@ -218,6 +218,8 @@ class ABSADataset(Dataset):
             if valid_id == 1:
                 token_head_list.append(input_id)
         key_list = token_head_list[:self.max_key_len]
+        if len(key_list) < self.max_key_len:
+            key_list = key_list + [0] * (self.max_key_len - len(key_list))
         print(token_head_list)
         print(key_list)
         print(token_head_list)
