@@ -231,13 +231,11 @@ class ABSADataset(Dataset):
         final_dep_adj_matrix = [[0]*self.max_key_len for _ in range(self.tokenizer.max_seq_len)]
         final_dep_value_matrix = [[0]*self.max_key_len for _ in range(self.tokenizer.max_seq_len)]
         for i in range(len(token_head_list)):
-            if i == 0:
-                continue
-            for j in range(len(dep_adj_matrix[i-1])):
+            for j in range(len(dep_adj_matrix[i])):
                 if j >= self.max_key_len:
                     break
-                final_dep_adj_matrix[i][j] = dep_adj_matrix[i-1][j]
-                final_dep_value_matrix[i][j] = self.deptype2id[dep_type_matrix[i-1][j]]
+                final_dep_adj_matrix[i+1][j] = dep_adj_matrix[i][j]
+                final_dep_value_matrix[i+1][j] = self.deptype2id[dep_type_matrix[i][j]]
 
         sentence_len = sum(left_valid_ids + aspect_valid_ids + right_valid_ids) + 2
         aspect_left_len = sum(left_valid_ids) + 1
