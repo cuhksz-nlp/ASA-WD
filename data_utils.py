@@ -146,6 +146,8 @@ class ABSADataset(Dataset):
         self.dep_order = dep_order
         self.textdata = ABSADataset.load_datafile(self.datafile)
         self.depinfo = ABSADataset.load_depfile(self.depfile)
+        self.polarity_label = ["-1","0","1"]
+        self.polarity2id = dict([(label, idx) for idx,label in enumerate(self.polarity_label)])
         self.feature = []
         for sentence,depinfo in zip(self.textdata, self.depinfo):
             self.feature.append(self.create_feature(sentence, depinfo))
@@ -253,6 +255,9 @@ class ABSADataset(Dataset):
             "key_list":torch.tensor(key_list),
             "dep_adj_matrix":torch.tensor(final_dep_adj_matrix),
             "dep_value_matrix":torch.tensor(final_dep_value_matrix),
+            "polarity": self.polarity2id[polarity],
+            "raw_text": doc,
+            "aspect": aspect
         }
 
 
