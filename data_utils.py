@@ -179,7 +179,7 @@ class ABSADataset(Dataset):
         cls_id = self.tokenizer.tokenizer.vocab["[CLS]"]
         sep_id = self.tokenizer.tokenizer.vocab["[SEP]"]
 
-        doc = text_left + aspect + text_right
+        doc = text_left + " " + aspect + " " + text_right
         print(doc)
         print(len(doc.split(" ")))
 
@@ -211,7 +211,11 @@ class ABSADataset(Dataset):
 
         token_head_list = []
         for input_id, valid_id in zip(input_ids, valid_ids):
-            if valid_id == 1 and input_id not in [cls_id, sep_id]:
+            if input_id == cls_id:
+                continue
+            if input_id == sep_id:
+                break
+            if valid_id == 1:
                 token_head_list.append(input_id)
         key_list = token_head_list[:self.max_key_len]
         print(token_head_list)
