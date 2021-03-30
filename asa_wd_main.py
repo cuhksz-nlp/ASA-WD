@@ -86,10 +86,9 @@ class Instructor:
         global_step = 0
         path = None
 
-        opt = self.opt
-        results = {"bert_model": opt.bert_model, "batch_size": opt.batch_size,
-                   "learning_rate": opt.learning_rate, "seed": opt.seed,
-                   "l2reg": opt.l2reg, "incro": opt.incro}
+        results = {"bert_model": self.opt.bert_model, "batch_size": self.opt.batch_size,
+                   "learning_rate": self.opt.learning_rate, "seed": self.opt.seed,
+                   "l2reg": self.opt.l2reg, "incro": self.opt.incro}
         for epoch in range(self.opt.num_epoch):
             logger.info('>' * 100)
             logger.info('epoch: {}'.format(epoch))
@@ -101,13 +100,13 @@ class Instructor:
                 global_step += 1
                 # clear gradient accumulators
                 optimizer.zero_grad()
-                outputs = self.model(t_sample_batched["input_ids"],
-                                     t_sample_batched["segment_ids"],
-                                     t_sample_batched["valid_ids"],
-                                     t_sample_batched["mem_valid_ids"],
-                                     t_sample_batched["key_list"],
-                                     t_sample_batched["dep_adj_matrix"],
-                                     t_sample_batched["dep_value_matrix"])
+                outputs = self.model(t_sample_batched["input_ids"].to(self.opt.device),
+                                     t_sample_batched["segment_ids"].to(self.opt.device),
+                                     t_sample_batched["valid_ids"].to(self.opt.device),
+                                     t_sample_batched["mem_valid_ids"].to(self.opt.device),
+                                     t_sample_batched["key_list"].to(self.opt.device),
+                                     t_sample_batched["dep_adj_matrix"].to(self.opt.device),
+                                     t_sample_batched["dep_value_matrix"].to(self.opt.device))
 
                 targets = t_sample_batched['polarity'].to(self.opt.device)
 
@@ -166,13 +165,13 @@ class Instructor:
                 t_raw_texts = t_sample_batched['raw_text']
                 t_aspects = t_sample_batched['aspect']
 
-                t_outputs = self.model(t_sample_batched["input_ids"],
-                                       t_sample_batched["segment_ids"],
-                                       t_sample_batched["valid_ids"],
-                                       t_sample_batched["mem_valid_ids"],
-                                       t_sample_batched["key_list"],
-                                       t_sample_batched["dep_adj_matrix"],
-                                       t_sample_batched["dep_value_matrix"])
+                t_outputs = self.model(t_sample_batched["input_ids"].to(self.opt.device),
+                                       t_sample_batched["segment_ids"].to(self.opt.device),
+                                       t_sample_batched["valid_ids"].to(self.opt.device),
+                                       t_sample_batched["mem_valid_ids"].to(self.opt.device),
+                                       t_sample_batched["key_list"].to(self.opt.device),
+                                       t_sample_batched["dep_adj_matrix"].to(self.opt.device),
+                                       t_sample_batched["dep_value_matrix"].to(self.opt.device))
 
                 n_correct += (torch.argmax(t_outputs, -1) == t_targets).sum().item()
                 n_total += len(t_outputs)
