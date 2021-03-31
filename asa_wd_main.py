@@ -34,10 +34,11 @@ class Instructor:
         print(deptype2id)
         self.trainset = ABSADataset(opt.train_file, tokenizer, self.opt, deptype2id=deptype2id)
         self.testset = ABSADataset(opt.test_file, tokenizer, self.opt, deptype2id=deptype2id)
+        self.valset = self.testset
 
-        assert 0 < opt.valset_ratio < 1
-        valset_len = int(len(self.trainset) * opt.valset_ratio)
-        self.trainset, self.valset = random_split(self.trainset, (len(self.trainset)-valset_len, valset_len))
+        # assert 0 < opt.valset_ratio < 1
+        # valset_len = int(len(self.trainset) * opt.valset_ratio)
+        # self.trainset, self.valset = random_split(self.trainset, (len(self.trainset)-valset_len, valset_len))
 
         if opt.device.type == 'cuda':
             logger.info('cuda memory allocated: {}'.format(torch.cuda.memory_allocated(device=opt.device.index)))
