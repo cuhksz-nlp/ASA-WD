@@ -3,6 +3,7 @@ import argparse
 import math
 import os
 import sys
+import json
 from time import strftime, localtime
 import random
 import numpy as np
@@ -12,7 +13,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 
-from pytorch_transformers import BertModel
+from pytorch_transformers import BertModel, BertConfig
 from data_utils import Tokenizer4Bert, ABSADataset
 from asa_wd_model import AsaWd
 
@@ -25,13 +26,17 @@ class Instructor:
         self.opt = opt
         tokenizer = Tokenizer4Bert(opt.max_seq_len, opt.bert_model)
         self.model = AsaWd.from_pretrained(opt.bert_model, num_labels=opt.polarities_dim, bert_dropout=opt.bert_dropout,
-                                  feature_vocab_size=opt.feature_vocab_size, incro=opt.incro)
+                                  feature_vocab_size=opt.feature_vocab_size)
         self.model.to(opt.device)
         self.tokenizer = tokenizer
 
         print(opt)
         deptype2id = ABSADataset.load_deptype_map(opt)
+        polarity2id = ABSADataset.get_polarity2id()
         print(deptype2id)
+        print(polarity2id)
+        self.deptype2id = deptype2id
+        self.polarity2id = polarity2id
         self.trainset = ABSADataset(opt.train_file, tokenizer, self.opt, deptype2id=deptype2id)
         self.testset = ABSADataset(opt.test_file, tokenizer, self.opt, deptype2id=deptype2id)
         self.valset = self.testset
@@ -76,8 +81,12 @@ class Instructor:
         output_model_file = os.path.join(save_path, WEIGHTS_NAME)
         output_config_file = os.path.join(save_path, CONFIG_NAME)
         torch.save(model_to_save.state_dict(), output_model_file)
+
+        config = model_to_save.config
+        config.__dict__["deptype2id"] = self.deptype2id
+        config.__dict__["polarity2id"] = self.polarity2id
         with open(output_config_file, "w", encoding='utf-8') as writer:
-            writer.write(model_to_save.config.to_json_string())
+            writer.write(config.to_json_string())
         output_args_file = os.path.join(save_path, 'training_args.bin')
         torch.save(args, output_args_file)
 
@@ -123,7 +132,7 @@ class Instructor:
                     train_acc = n_correct / n_total
                     train_loss = loss_total / n_total
                     logger.info('epoch: {}, loss: {:.4f}, acc: {:.4f}'.format(epoch, train_loss, train_acc))
-            val_acc, val_f1 = self._evaluate_acc_f1(val_data_loader)
+            val_acc, val_f1 = Instructor._evaluate_acc_f1(self.model, val_data_loader, device=self.opt.device)
             logger.info('>epoch: {}, val_acc: {:.4f}, val_f1: {:.4f}'.format(epoch, val_acc, val_f1))
             results["{}_val_acc".format(epoch)] = val_acc
             results["{}_val_f1".format(epoch)] = val_f1
@@ -137,7 +146,7 @@ class Instructor:
 
                 self.model.eval()
                 saving_path = os.path.join(self.opt.outdir, "epoch_{}_eval.txt".format(epoch))
-                test_acc, test_f1 = self._evaluate_acc_f1(test_data_loader, saving_path)
+                test_acc, test_f1 = self._evaluate_acc_f1(self.model, test_data_loader, device=self.opt.device, saving_path=saving_path)
                 logger.info('>> epoch: {}, test_acc: {:.4f}, test_f1: {:.4f}'.format(epoch, test_acc, test_f1))
                 print(('>> epoch: {}, test_acc: {:.4f}, test_f1: {:.4f}'.format(epoch, test_acc, test_f1)))
 
@@ -152,27 +161,28 @@ class Instructor:
                     writer.write("{}={}\n".format(k,v))
         return path
 
-    def _evaluate_acc_f1(self, data_loader, saving_path=None):
+    @staticmethod
+    def _evaluate_acc_f1(model, data_loader, device, saving_path=None):
         n_correct, n_total = 0, 0
         t_targets_all, t_outputs_all = None, None
         # switch model to evaluation mode
-        self.model.eval()
+        model.eval()
 
         saving_path_f = open(saving_path, 'w') if saving_path is not None else None
 
         with torch.no_grad():
             for t_batch, t_sample_batched in enumerate(data_loader):
-                t_targets = t_sample_batched['polarity'].to(self.opt.device)
+                t_targets = t_sample_batched['polarity'].to(device)
                 t_raw_texts = t_sample_batched['raw_text']
                 t_aspects = t_sample_batched['aspect']
 
-                t_outputs = self.model(t_sample_batched["input_ids"].to(self.opt.device),
-                                       t_sample_batched["segment_ids"].to(self.opt.device),
-                                       t_sample_batched["valid_ids"].to(self.opt.device),
-                                       t_sample_batched["mem_valid_ids"].to(self.opt.device),
-                                       t_sample_batched["key_list"].to(self.opt.device),
-                                       t_sample_batched["dep_adj_matrix"].to(self.opt.device),
-                                       t_sample_batched["dep_value_matrix"].to(self.opt.device))
+                t_outputs = model(t_sample_batched["input_ids"].to(device),
+                                       t_sample_batched["segment_ids"].to(device),
+                                       t_sample_batched["valid_ids"].to(device),
+                                       t_sample_batched["mem_valid_ids"].to(device),
+                                       t_sample_batched["key_list"].to(device),
+                                       t_sample_batched["dep_adj_matrix"].to(device),
+                                       t_sample_batched["dep_value_matrix"].to(device))
 
                 n_correct += (torch.argmax(t_outputs, -1) == t_targets).sum().item()
                 n_total += len(t_outputs)
@@ -207,10 +217,25 @@ class Instructor:
         self._reset_params()
         self._train(criterion, optimizer, train_data_loader, val_data_loader, test_data_loader)
 
-    def test(self):
-        test_data_loader = DataLoader(dataset=self.testset, batch_size=self.opt.batch_size, shuffle=False)
-        test_acc, test_f1 = self._evaluate_acc_f1(test_data_loader)
-        logger.info('>> test_acc: {:.4f}, test_f1: {:.4f}'.format(test_acc, test_f1))
+def test(opt):
+    print(opt)
+
+    CONFIG_NAME = 'config.json'
+    config = BertConfig.from_json_file(os.path.join(opt.model_path, CONFIG_NAME))
+    print(config)
+
+    tokenizer = Tokenizer4Bert(opt.max_seq_len, opt.bert_model)
+    model = AsaWd.from_pretrained(opt.model_path, num_labels=config.polarities_dim, bert_dropout=config.bert_dropout,
+                                       feature_vocab_size=config.feature_vocab_size)
+    model.to(opt.device)
+
+
+    deptype2id = config.deptype2id
+    print(deptype2id)
+    testset = ABSADataset(opt.test_file, tokenizer, opt, deptype2id=deptype2id)
+    test_data_loader = DataLoader(dataset=testset, batch_size=opt.batch_size, shuffle=False)
+    test_acc, test_f1 = Instructor._evaluate_acc_f1(model, test_data_loader, device=opt.device)
+    logger.info('>> test_acc: {:.4f}, test_f1: {:.4f}'.format(test_acc, test_f1))
 
 def get_args():
     # Hyper Parameters
@@ -235,6 +260,7 @@ def get_args():
     parser.add_argument('--knowledge_type', default='dep', type=str)
     parser.add_argument('--log', default='log', type=str)
     parser.add_argument('--bert_model', default='./bert-large-uncased', type=str)
+    parser.add_argument('--model_path', default='./bert-large-uncased', type=str)
     parser.add_argument('--f_t', default=3, type=int)
     parser.add_argument('--incro', default='cat', type=str)
     parser.add_argument('--mem_valid', default='aspect', type=str)
@@ -278,12 +304,11 @@ def main():
     log_file = '{}/{}-{}-{}.log'.format(opt.log, opt.mem_valid, opt.dep_order, strftime("%y%m%d-%H%M", localtime()))
     logger.addHandler(logging.FileHandler(log_file))
 
-    ins = Instructor(opt)
-
     if opt.do_train:
+        ins = Instructor(opt)
         ins.train()
     elif opt.do_eval:
-        ins.test()
+        test(opt)
 
 if __name__ == '__main__':
     main()

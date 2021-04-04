@@ -34,17 +34,16 @@ class KeyValueMemoryNetwork(nn.Module):
 
 
 class AsaWd(BertPreTrainedModel):
-    def __init__(self, config, num_labels=3, feature_vocab_size=16384, bert_dropout=0.1, incro='cat'):
+    def __init__(self, config, num_labels=3, feature_vocab_size=16384, bert_dropout=0.1):
         super(AsaWd, self).__init__(config)
         self.config = config
         self.config.num_labels = num_labels
         self.config.feature_vocab_size = feature_vocab_size
         self.config.bert_dropout = bert_dropout
-        self.config.incro = incro
 
         self.bert = BertModel(config)
         self.bert_dropout = nn.Dropout(bert_dropout)
-        self.dense = torch.nn.Linear(self.config.hidden_size*2, num_labels)
+        self.double_dense = torch.nn.Linear(self.config.hidden_size*2, num_labels)
         self.memory = KeyValueMemoryNetwork(
             vocab_size=self.config.vocab_size,
             feature_vocab_size=feature_vocab_size,
@@ -66,7 +65,7 @@ class AsaWd(BertPreTrainedModel):
         a = self.memory(key_list, dep_value_matrix, valid_output, dep_adj_matrix)
         pooled_output = self.bert_dropout(pooled_output)
         c = torch.cat((pooled_output, a), 1)
-        logits = self.dense(c)
+        logits = self.double_dense(c)
 
         return logits
 

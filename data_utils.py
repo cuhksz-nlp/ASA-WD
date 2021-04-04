@@ -149,8 +149,7 @@ class ABSADataset(Dataset):
         self.dep_order = dep_order
         self.textdata = ABSADataset.load_datafile(self.datafile)
         self.depinfo = ABSADataset.load_depfile(self.depfile)
-        self.polarity_label = ["-1","0","1"]
-        self.polarity2id = dict([(label, idx) for idx,label in enumerate(self.polarity_label)])
+        self.polarity2id = self.get_polarity2id()
         self.feature = []
         for sentence,depinfo in zip(self.textdata, self.depinfo):
             self.feature.append(self.create_feature(sentence, depinfo))
@@ -185,8 +184,8 @@ class ABSADataset(Dataset):
         sep_id = self.tokenizer.tokenizer.vocab["[SEP]"]
 
         doc = text_left + " " + aspect + " " + text_right
-        print(doc)
-        print(len(doc.split(" ")))
+        # print(doc)
+        # print(len(doc.split(" ")))
 
         left_tokens, left_token_ids, left_valid_ids = self.ws(text_left.split(" "))
         right_tokens, right_token_ids, right_valid_ids = self.ws(text_right.split(" "))
@@ -210,9 +209,9 @@ class ABSADataset(Dataset):
             dep_adj_matrix, dep_type_matrix = dep_instance_parser.get_second_order()
         elif self.dep_order == "third":
             dep_adj_matrix, dep_type_matrix = dep_instance_parser.get_third_order()
-        print(dep_adj_matrix)
-        print(dep_type_matrix)
-        print(len(dep_type_matrix))
+        # print(dep_adj_matrix)
+        # print(dep_type_matrix)
+        # print(len(dep_type_matrix))
 
         token_head_list = []
         for input_id, valid_id in zip(input_ids, valid_ids):
@@ -225,9 +224,9 @@ class ABSADataset(Dataset):
         key_list = token_head_list[:self.max_key_len]
         if len(key_list) < self.max_key_len:
             key_list = key_list + [0] * (self.max_key_len - len(key_list))
-        print(token_head_list)
-        print(key_list)
-        print(token_head_list)
+        # print(token_head_list)
+        # print(key_list)
+        # print(token_head_list)
         final_dep_adj_matrix = [[0]*self.max_key_len for _ in range(self.tokenizer.max_seq_len)]
         final_dep_value_matrix = [[0]*self.max_key_len for _ in range(self.tokenizer.max_seq_len)]
         for i in range(len(token_head_list)):
@@ -314,4 +313,10 @@ class ABSADataset(Dataset):
         for deptype in sorted(deptype_set, key=lambda x:x):
             deptype_map[deptype] = len(deptype_map)
         return deptype_map
+
+    @staticmethod
+    def get_polarity2id():
+        polarity_label = ["-1","0","1"]
+        return dict([(label, idx) for idx,label in enumerate(polarity_label)])
+
 
