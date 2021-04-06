@@ -82,9 +82,9 @@ class DepInstanceParser():
     def get_first_order(self, direct=False):
         dep_adj_matrix  = [[0] * len(self.dep_governed_info) for _ in range(len(self.dep_governed_info))]
         dep_type_matrix = [["none"] * len(self.dep_governed_info) for _ in range(len(self.dep_governed_info))]
-        for i in range(len(self.dep_governed_info)):
-            dep_adj_matrix[i][i]  = 1
-            dep_type_matrix[i][i] = "self_loop"
+        # for i in range(len(self.dep_governed_info)):
+        #     dep_adj_matrix[i][i]  = 1
+        #     dep_type_matrix[i][i] = "self_loop"
         for i, dep_info in enumerate(self.dep_governed_info):
             governor = dep_info["governor"]
             dep_type = dep_info["dep"]
@@ -309,7 +309,7 @@ class ABSADataset(Dataset):
             for dep_info in data:
                 for item in dep_info:
                     deptype_set.add(item['dep'])
-        deptype_map = {"none": 0, "self_loop": 1}
+        deptype_map = {"none": 0}
         for deptype in sorted(deptype_set, key=lambda x:x):
             deptype_map[deptype] = len(deptype_map)
         return deptype_map
