@@ -225,7 +225,7 @@ def test(opt):
     print(config)
 
     tokenizer = Tokenizer4Bert(opt.max_seq_len, opt.bert_model)
-    model = AsaWd.from_pretrained(opt.model_path, num_labels=config.polarities_dim, bert_dropout=config.bert_dropout,
+    model = AsaWd.from_pretrained(opt.model_path, num_labels=config.num_labels, bert_dropout=config.bert_dropout,
                                        feature_vocab_size=config.feature_vocab_size)
     model.to(opt.device)
 
