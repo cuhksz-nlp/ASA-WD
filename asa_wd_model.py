@@ -34,20 +34,20 @@ class KeyValueMemoryNetwork(nn.Module):
 
 
 class AsaWd(BertPreTrainedModel):
-    def __init__(self, config, num_labels, feature_vocab_size, bert_dropout=0.1):
+    def __init__(self, config):
         super(AsaWd, self).__init__(config)
         self.config = config
-        self.config.num_labels = num_labels
-        self.config.feature_vocab_size = feature_vocab_size
-        self.config.bert_dropout = bert_dropout
+        self.num_labels = config.num_labels
+        self.feature_vocab_size = config.feature_vocab_size
+        self.bert_dropout = config.bert_dropout
 
         self.bert = BertModel(config)
-        self.bert_dropout = nn.Dropout(bert_dropout)
-        self.double_dense = torch.nn.Linear(self.config.hidden_size*2, num_labels)
+        self.bert_dropout = nn.Dropout(config.bert_dropout)
+        self.double_dense = torch.nn.Linear(self.config.hidden_size*2, config.num_labels)
         self.memory = KeyValueMemoryNetwork(
-            vocab_size=self.config.vocab_size,
-            feature_vocab_size=feature_vocab_size,
-            emb_size=self.config.hidden_size,
+            vocab_size=config.vocab_size,
+            feature_vocab_size=config.feature_vocab_size,
+            emb_size=config.hidden_size,
         )
         self.memory.key_embedding = nn.Embedding.from_pretrained(self.bert.embeddings.word_embeddings.weight)
 

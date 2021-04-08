@@ -17,6 +17,9 @@ from pytorch_transformers import BertModel, BertConfig
 from data_utils import Tokenizer4Bert, ABSADataset
 from asa_wd_model import AsaWd
 
+CONFIG_NAME = 'config.json'
+WEIGHTS_NAME = 'pytorch_model.bin'
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(sys.stdout))
@@ -25,8 +28,12 @@ class Instructor:
     def __init__(self, opt):
         self.opt = opt
         tokenizer = Tokenizer4Bert(opt.max_seq_len, opt.bert_model)
-        self.model = AsaWd.from_pretrained(opt.bert_model, num_labels=opt.polarities_dim, bert_dropout=opt.bert_dropout,
-                                  feature_vocab_size=opt.feature_vocab_size)
+        config = BertConfig.from_json_file(os.path.join(opt.model_path, CONFIG_NAME))
+        config.num_labels=opt.polarities_dim
+        config.bert_dropout=opt.bert_dropout
+        config.feature_vocab_size=opt.feature_vocab_size
+        print(config)
+        self.model = AsaWd.from_pretrained(opt.bert_model, config=config)
         self.model.to(opt.device)
         self.tokenizer = tokenizer
 
@@ -73,8 +80,6 @@ class Instructor:
                             torch.nn.init.uniform_(p, a=-stdv, b=stdv)
 
     def save_model(self, save_path, model, args):
-        CONFIG_NAME = 'config.json'
-        WEIGHTS_NAME = 'pytorch_model.bin'
         # Save a trained model, configuration and tokenizer
         model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
         # If we save using the predefined names, we can load using `from_pretrained`
@@ -219,14 +224,11 @@ class Instructor:
 
 def test(opt):
     print(opt)
-
-    CONFIG_NAME = 'config.json'
     config = BertConfig.from_json_file(os.path.join(opt.model_path, CONFIG_NAME))
     print(config)
 
     tokenizer = Tokenizer4Bert(opt.max_seq_len, opt.bert_model)
-    model = AsaWd.from_pretrained(opt.model_path, num_labels=config.num_labels, bert_dropout=config.bert_dropout,
-                                       feature_vocab_size=config.feature_vocab_size)
+    model = AsaWd.from_pretrained(opt.model_path)
     model.to(opt.device)
 
 
