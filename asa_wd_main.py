@@ -276,7 +276,8 @@ def get_args():
     opt = parser.parse_args()
 
     now_time = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    opt.outdir = os.path.join(opt.outdir, "bts_{}_lr_{}_l2reg_{}_seed_{}_bert_dropout_{}_{}".format(
+    opt.outdir = os.path.join(opt.outdir, "{}_bts_{}_lr_{}_l2reg_{}_seed_{}_bert_dropout_{}_{}".format(
+        opt.model_name,
         opt.batch_size,
         opt.learning_rate,
         opt.l2reg,
