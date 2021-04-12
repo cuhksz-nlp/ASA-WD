@@ -2,7 +2,7 @@
 
 This is the implementation of [Enhancing Aspect-level Sentiment Analysis with Word Dependencies]() at EACL 2021.
 
-You can e-mail Guimin Chen at `chenguimin@foxmail.com` or `cuhksz.nlp@gmail.com`, if you have any questions.
+You can e-mail Guimin Chen at `chenguimin@sribd.cn` or `cuhksz.nlp@gmail.com`, if you have any questions.
 
 ## Citation
 
