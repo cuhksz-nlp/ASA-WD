@@ -32,25 +32,27 @@ class Instructor:
         config.num_labels=opt.polarities_dim
         config.bert_dropout=opt.bert_dropout
         config.feature_vocab_size=opt.feature_vocab_size
-        print(config)
+        logger.info(config)
         self.model = AsaWd.from_pretrained(opt.bert_model, config=config)
         self.model.to(opt.device)
         self.tokenizer = tokenizer
 
-        print(opt)
+        logger.info(opt)
         deptype2id = ABSADataset.load_deptype_map(opt)
         polarity2id = ABSADataset.get_polarity2id()
-        print(deptype2id)
-        print(polarity2id)
+        logger.info(deptype2id)
+        logger.info(polarity2id)
         self.deptype2id = deptype2id
         self.polarity2id = polarity2id
         self.trainset = ABSADataset(opt.train_file, tokenizer, self.opt, deptype2id=deptype2id)
         self.testset = ABSADataset(opt.test_file, tokenizer, self.opt, deptype2id=deptype2id)
-        self.valset = self.testset
-
-        # assert 0 < opt.valset_ratio < 1
-        # valset_len = int(len(self.trainset) * opt.valset_ratio)
-        # self.trainset, self.valset = random_split(self.trainset, (len(self.trainset)-valset_len, valset_len))
+        if os.path.exists(opt.val_file):
+            self.valset = ABSADataset(opt.val_file, tokenizer, self.opt, deptype2id=deptype2id)
+        elif opt.valset_ratio > 0:
+            valset_len = int(len(self.trainset) * opt.valset_ratio)
+            self.trainset, self.valset = random_split(self.trainset, (len(self.trainset)-valset_len, valset_len))
+        else:
+            self.valset = self.testset
 
         if opt.device.type == 'cuda':
             logger.info('cuda memory allocated: {}'.format(torch.cuda.memory_allocated(device=opt.device.index)))
@@ -153,7 +155,6 @@ class Instructor:
                 saving_path = os.path.join(self.opt.outdir, "epoch_{}_eval.txt".format(epoch))
                 test_acc, test_f1 = self._evaluate_acc_f1(self.model, test_data_loader, device=self.opt.device, saving_path=saving_path)
                 logger.info('>> epoch: {}, test_acc: {:.4f}, test_f1: {:.4f}'.format(epoch, test_acc, test_f1))
-                print(('>> epoch: {}, test_acc: {:.4f}, test_f1: {:.4f}'.format(epoch, test_acc, test_f1)))
 
                 results["max_val_acc"] = max_val_acc
                 results["test_acc"] = test_acc
@@ -223,17 +224,17 @@ class Instructor:
         self._train(criterion, optimizer, train_data_loader, val_data_loader, test_data_loader)
 
 def test(opt):
-    print(opt)
+    logger.info(opt)
     config = BertConfig.from_json_file(os.path.join(opt.model_path, CONFIG_NAME))
-    print(config)
+    logger.info(config)
 
-    tokenizer = Tokenizer4Bert(opt.max_seq_len, opt.bert_model)
+    tokenizer = Tokenizer4Bert(opt.max_seq_len, opt.model_path)
     model = AsaWd.from_pretrained(opt.model_path)
     model.to(opt.device)
 
 
     deptype2id = config.deptype2id
-    print(deptype2id)
+    logger.info(deptype2id)
     testset = ABSADataset(opt.test_file, tokenizer, opt, deptype2id=deptype2id)
     test_data_loader = DataLoader(dataset=testset, batch_size=opt.batch_size, shuffle=False)
     test_acc, test_f1 = Instructor._evaluate_acc_f1(model, test_data_loader, device=opt.device)
@@ -242,10 +243,10 @@ def test(opt):
 def get_args():
     # Hyper Parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_name', default='bert_kv_aspect-second', type=str)
-    parser.add_argument('--train_file', default='demo/train.txt', type=str)
-    parser.add_argument('--test_file', default='demo/test.txt', type=str)
-    parser.add_argument('--val_file', default='demo/val.txt', type=str)
+    parser.add_argument('--model_name', default='', type=str)
+    parser.add_argument('--train_file', default='sample_data/train.txt', type=str)
+    parser.add_argument('--test_file', default='sample_data/test.txt', type=str)
+    parser.add_argument('--val_file', default='sample_data/val.txt', type=str)
     parser.add_argument('--learning_rate', default='2e-5', type=float)
     parser.add_argument('--dropout', default=0, type=float)
     parser.add_argument('--bert_dropout', default=0.2, type=float)
@@ -258,35 +259,32 @@ def get_args():
     parser.add_argument('--feature_vocab_size', default=16384, type=int)
     parser.add_argument('--device', default=None, type=str, help='e.g. cuda:0')
     parser.add_argument('--seed', default=40, type=int, help='set seed for reproducibility')
-    parser.add_argument('--valset_ratio', default=0, type=float, help='set ratio between 0 and 1 for validation support')
+    parser.add_argument('--valset_ratio', default=0.0, type=float, help='set ratio between 0 and 1 for validation support')
     parser.add_argument('--knowledge_type', default='dep', type=str)
     parser.add_argument('--log', default='log', type=str)
     parser.add_argument('--bert_model', default='./bert-large-uncased', type=str)
     parser.add_argument('--model_path', default='./bert-large-uncased', type=str)
-    parser.add_argument('--f_t', default=3, type=int)
     parser.add_argument('--incro', default='cat', type=str)
     parser.add_argument('--mem_valid', default='aspect', type=str)
     parser.add_argument('--dep_order', default='second', type=str)
-    parser.add_argument('--mode',default='case', type=str)
-    parser.add_argument('--conflict', default=0, type=int)
-    parser.add_argument('--abalation', default='none', type=str)
     parser.add_argument('--outdir', default='./', type=str)
     parser.add_argument("--do_train", action='store_true', help="Whether to run training.")
     parser.add_argument("--do_eval", action='store_true', help="Whether to run eval on the dev set.")
     opt = parser.parse_args()
 
-    now_time = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    opt.outdir = os.path.join(opt.outdir, "{}_bts_{}_lr_{}_l2reg_{}_seed_{}_bert_dropout_{}_{}".format(
-        opt.model_name,
-        opt.batch_size,
-        opt.learning_rate,
-        opt.l2reg,
-        opt.seed,
-        opt.bert_dropout,
-        now_time
-    ))
-    if not os.path.exists(opt.outdir):
-        os.mkdir(opt.outdir)
+    if opt.do_train:
+        now_time = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+        opt.outdir = os.path.join(opt.outdir, "{}_bts_{}_lr_{}_l2reg_{}_seed_{}_bert_dropout_{}_{}".format(
+            opt.model_name,
+            opt.batch_size,
+            opt.learning_rate,
+            opt.l2reg,
+            opt.seed,
+            opt.bert_dropout,
+            now_time
+        ))
+        if not os.path.exists(opt.outdir):
+            os.mkdir(opt.outdir)
 
     return opt
 
