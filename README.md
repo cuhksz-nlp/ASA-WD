@@ -9,9 +9,9 @@ You can e-mail Guimin Chen at `chenguimin@foxmail.com` or `cuhksz.nlp@gmail.com`
 If you use or extend our work, please cite our paper at EACL 2021.
 
 ```
-@inproceedings{chen-etal-2021-wd-aspect,
+@inproceedings{tian-etal-2021-wd-aspect,
     title = "Enhancing Aspect-level Sentiment Analysis with Word Dependencies",
-    author = "Chen, Guimin  and Tian, Yuanhe  and Song, Yan",
+    author = "Tian, Yuanhe  and Chen, Guimin  and Song, Yan",
     booktitle = "Proceedings of the 16th Conference of the {E}uropean Chapter of the Association for Computational Linguistics",
     year = "2021",
 }
