@@ -1,6 +1,6 @@
 # ASA-WD
 
-This is the implementation of [Enhancing Aspect-level Sentiment Analysis with Word Dependencies]() at EACL 2021.
+This is the implementation of [Enhancing Aspect-level Sentiment Analysis with Word Dependencies](https://www.aclweb.org/anthology/2021.eacl-main.326/) at EACL 2021.
 
 You can e-mail Guimin Chen at `chenguimin@sribd.cn` or `cuhksz.nlp@gmail.com`, if you have any questions.
 
@@ -9,10 +9,10 @@ You can e-mail Guimin Chen at `chenguimin@sribd.cn` or `cuhksz.nlp@gmail.com`, i
 If you use or extend our work, please cite our paper at EACL 2021.
 
 ```
-@inproceedings{tian-etal-2021-wd-aspect,
+@inproceedings{tian-etal-2021-enhancing,
     title = "Enhancing Aspect-level Sentiment Analysis with Word Dependencies",
     author = "Tian, Yuanhe  and Chen, Guimin  and Song, Yan",
-    booktitle = "Proceedings of the 16th Conference of the {E}uropean Chapter of the Association for Computational Linguistics",
+    booktitle = "Proceedings of the 16th Conference of the European Chapter of the Association for Computational Linguistics: Main Volume",
     year = "2021",
 }
 ```
