@@ -42,7 +42,7 @@ class AsaWd(BertPreTrainedModel):
         self.bert_dropout = config.bert_dropout
 
         self.bert = BertModel(config)
-        self.bert_dropout = nn.Dropout(config.bert_dropout)
+        self.bert_dropout = nn.Dropout(0.1)
         self.double_dense = torch.nn.Linear(self.config.hidden_size*2, config.num_labels)
         self.memory = KeyValueMemoryNetwork(
             vocab_size=config.vocab_size,
@@ -55,7 +55,7 @@ class AsaWd(BertPreTrainedModel):
         sequence_output, pooled_output = self.bert(input_ids, segment_ids)
         batch_size, max_len, feat_dim = sequence_output.shape
 
-        valid_output = torch.zeros(batch_size, max_len, feat_dim, dtype=torch.float32, device='cuda')
+        valid_output = torch.zeros(batch_size, max_len, feat_dim, dtype=torch.float32, device=sequence_output.device)
 
         for i in range(batch_size):
             temp = sequence_output[i][valid_ids[i] == 1]
