@@ -2,7 +2,7 @@
 
 This is the implementation of [Enhancing Aspect-level Sentiment Analysis with Word Dependencies](https://www.aclweb.org/anthology/2021.eacl-main.326/) at EACL 2021.
 
-You can e-mail Yuanhe Tian at if you have any questions.
+You can e-mail Yuanhe Tian at `yhtian@uw.edu` if you have any questions.
 
 ## Citation
 
